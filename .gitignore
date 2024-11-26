@@ -1,0 +1,16 @@
+.bundle/
+.yardoc
+ext/snow_duck/target
+_yardoc/
+coverage/
+doc/
+pkg/
+spec/reports/
+tmp/
+.idea
+.DS_Store
+*.gem
+
+
+# rspec failure tracking
+.rspec_status

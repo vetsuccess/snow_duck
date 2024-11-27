@@ -2,7 +2,7 @@ use std::error;
 
 use chrono::{NaiveDate, Datelike};
 use duckdb::types::TimeUnit;
-use magnus::{RClass, eval, RString};
+use magnus::{eval, RArray, RClass, RHash, RString};
 use once_cell::sync::Lazy;
 
 static TIME_CLASS: Lazy<RClass> = Lazy::new(|| RClass::from_value(eval("Time").unwrap()).unwrap());
@@ -57,13 +57,33 @@ pub fn duck_to_ruby(duck_val: duckdb::types::Value) -> magnus::value::Value {
         duckdb::types::Value::Date32(days_since_unix_epoch) => convert_duck_date(days_since_unix_epoch),
         duckdb::types::Value::Time64(time_unit, time_value) => convert_duck_time(time_unit, time_value),
         duckdb::types::Value::Interval {..} => todo!(),
-        duckdb::types::Value::List(_) => todo!(),
+        duckdb::types::Value::List(list) => convert_vector_to_array(list),
         duckdb::types::Value::Enum(_) => todo!(),
         duckdb::types::Value::Struct(_) => todo!(),
-        duckdb::types::Value::Array(_) => todo!(),
-        duckdb::types::Value::Map(_) => todo!(),
+        duckdb::types::Value::Array(array) => convert_vector_to_array(array),
+        duckdb::types::Value::Map(map) => convert_map_to_hash(map),
         duckdb::types::Value::Union(_) => todo!(),
     }
+}
+
+#[inline]
+fn convert_map_to_hash(duck_map: duckdb::types::OrderedMap<duckdb::types::Value, duckdb::types::Value>) -> magnus::Value {
+    let hash_map = RHash::new();
+    duck_map.iter().for_each(|(key, value)| {
+        let key = duck_to_ruby(key.clone());
+        let val = duck_to_ruby(value.clone());
+        hash_map.aset(key, val).expect("Cound not set hash value");
+    });
+    hash_map.as_value()
+}
+
+#[inline]
+fn convert_vector_to_array(duck_vec: Vec<duckdb::types::Value>) -> magnus::Value {
+    let ruby_array = RArray::with_capacity(duck_vec.len());
+    duck_vec.into_iter().for_each(|value| {
+        ruby_array.push(duck_to_ruby(value)).expect("Cound not push value to array");
+    });
+    ruby_array.as_value()
 }
 
 #[inline]

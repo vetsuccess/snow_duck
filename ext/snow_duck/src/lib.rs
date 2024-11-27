@@ -114,7 +114,7 @@ impl MutDatabase {
         database
             .execute_batch(
                 "INSTALL aws;
-             INSTALL httpfs;",
+                 INSTALL httpfs;",
             )
             .unwrap();
         database

@@ -21,10 +21,8 @@ module SnowDuck
           database.execute_batch("CREATE TABLE #{table_name} AS (#{ddl_query});")
         else
           setup_s3_bucket(database_options)
-          snow_duck_log_with_time("Extracting snowflake data for arguments: (#{options}) to #{remote_file_location}") do
-            export_table_data_to_s3
-          end
-          snow_duck_log_with_time("Ingesting snowflake data for arguments: (#{options})") do
+          snow_duck_log_with_time("Extracting snowflake data for arguments to #{remote_file_location}") { export_table_data_to_s3 }
+          snow_duck_log_with_time("Ingesting snowflake data for arguments") do
             database.execute_batch("LOAD aws; LOAD httpfs; CREATE TABLE #{table_name} AS SELECT * FROM read_#{remote_file_type}('#{remote_file_location}');")
           end
           snow_duck_log_with_time("Deleting #{remote_file_location} from S3") { cleanup_remote_files }

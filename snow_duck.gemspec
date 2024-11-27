@@ -31,11 +31,6 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.extensions = ["ext/snow_duck/extconf.rb"]
-  # Magnus says: "needed until rubygems supports Rust support is out of beta" -> https://github.com/matsadler/magnus?tab=readme-ov-file#writing-an-extension-gem-calling-rust-from-ruby
-  # But we are not going to be using rake-compile on target machine, we are going to pre-compile it
-  # So its not going to be needed on target machine as well
   spec.add_dependency "rb_sys", "~> 0.9.39"
-
-  # only needed when developing or packaging your gem
   spec.add_dependency "rake-compiler", "~> 1.2.0"
 end

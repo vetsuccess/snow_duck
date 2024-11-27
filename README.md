@@ -35,6 +35,3 @@ ruby and rust, and will compile rust extension to a shared object `snow_duck.so`
 
 > [!NOTE]  
 > Building this can take a while, mostly because of `libduckdb-sys` crate - it can take up to 15 minutes to compile that one alone
-
-> [!NOTE]  
-> For now, only linux-compatible .so file is being built, and only for x86-64 arch

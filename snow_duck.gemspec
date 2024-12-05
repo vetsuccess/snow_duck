@@ -14,7 +14,7 @@ Gem::Specification.new do |spec|
   spec.required_ruby_version = ">= 2.7.0"
 
   # Prevent pushing this gem to RubyGems.org. This is a private gem.
-  spec.metadata["allowed_push_host"] = nil
+  spec.metadata["allowed_push_host"] = 'https://github.com/vetsuccess/snow_duck'
 
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/vetsuccess/snow_duck"

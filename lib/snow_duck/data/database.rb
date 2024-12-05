@@ -44,14 +44,30 @@ module SnowDuck
 
       # Can fail if table is not initialized yet, use it only when you know it already is!
       def pluck!(query)
-        @duck_db.pluck(query)
+        duck_db.pluck(query)
       end
 
       # Can fail if table is not initialized yet, use it only when you know it already is!
       def pluck_to_hash!(query)
-        @duck_db.pluck_to_hash(query)
+        duck_db.pluck_to_hash(query)
       end
-  
+
+      def pretty_print(formatter = SnowDuck::Format::MermaidFormatter.new)
+        snow_duck_logger_object.info(formatter.format(self))
+      end
+
+      def user_defined_tables_info
+        pluck_to_hash!("select * from duckdb_tables()")
+      end
+
+      def user_defined_views_info
+        pluck_to_hash!("select * from duckdb_views")
+      end
+
+      def memory_info
+        pluck_to_hash!("select * from duckdb_memory()")
+      end
+
       private
   
       def duck_db

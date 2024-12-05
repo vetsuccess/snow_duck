@@ -1,13 +1,17 @@
 use std::error;
 
 use chrono::{NaiveDate, Datelike};
-use duckdb::types::TimeUnit;
+use duckdb::{types::{OrderedMap, TimeUnit}, ToSql};
 use magnus::{eval, RArray, RClass, RHash, RString};
 use once_cell::sync::Lazy;
 
 static TIME_CLASS: Lazy<RClass> = Lazy::new(|| RClass::from_value(eval("Time").unwrap()).unwrap());
 static EPOCH_START: Lazy<NaiveDate> = Lazy::new(|| NaiveDate::from_ymd_opt(1970, 1, 1).unwrap());
 static DATE_CLASS: Lazy<RClass> = Lazy::new(|| RClass::from_value(eval("Date").unwrap()).unwrap());
+static DURATION_CLASS: Lazy<RClass> = Lazy::new(|| RClass::from_value(eval("ActiveSupport::Duration").unwrap()).unwrap());
+static SECONDS_PER_DAY: Lazy<i64> = Lazy::new(|| eval::<i64>("ActiveSupport::Duration::SECONDS_PER_DAY").unwrap());
+static SECONDS_PER_MONTH: Lazy<i64> = Lazy::new(|| eval::<i64>("ActiveSupport::Duration::SECONDS_PER_MONTH").unwrap());
+const NANOS_PER_SECOND: i64 = 1_000_000_000;
 
 pub (crate) fn string_from_ruby_hash(input: magnus::RHash, key: &str) -> String {
     // let better_option: magnus::RHash = input.funcall("with_indifferent_access", ()).unwrap();
@@ -15,9 +19,9 @@ pub (crate) fn string_from_ruby_hash(input: magnus::RHash, key: &str) -> String 
     RString::from_value(
         input
             .get(key)
-            .expect(&format!("{:?} key required to instantiate duckdb", key)),
+            .unwrap_or_else(|| panic!("{:?} key required to instantiate duckdb", key))
     )
-    .expect(&format!("Value provided as {:?} was not string", key))
+    .unwrap_or_else(|| panic!("Value provided as {:?} was not string", key))
     .to_string()
     .unwrap()
 }
@@ -28,10 +32,6 @@ pub (crate) fn to_standard_column_error(error: &duckdb::Error, column_name: &Str
 
 pub (crate) fn to_standard_error(error: Box<dyn error::Error>) -> magnus::Error {
     magnus::Error::new(magnus::exception::standard_error(), error.to_string())
-}
-
-pub (crate) fn to_standard_erorr_with_message(error: String) -> magnus::Error {
-    magnus::Error::new(magnus::exception::standard_error(), error)
 }
 
 #[inline]
@@ -56,25 +56,34 @@ pub fn duck_to_ruby(duck_val: duckdb::types::Value) -> magnus::value::Value {
         duckdb::types::Value::Blob(x) => magnus::Value::from(x),
         duckdb::types::Value::Date32(days_since_unix_epoch) => convert_duck_date(days_since_unix_epoch),
         duckdb::types::Value::Time64(time_unit, time_value) => convert_duck_time(time_unit, time_value),
-        duckdb::types::Value::Interval {..} => todo!(),
+        duckdb::types::Value::Interval { months, days, nanos } => convert_duck_interval(months, days, nanos),
         duckdb::types::Value::List(list) => convert_vector_to_array(list),
-        duckdb::types::Value::Enum(_) => todo!(),
-        duckdb::types::Value::Struct(_) => todo!(),
+        duckdb::types::Value::Enum(value) => magnus::Symbol::new(value.to_string().as_str()).as_value(),
+        duckdb::types::Value::Struct(fields) => convert_to_hash(fields),
         duckdb::types::Value::Array(array) => convert_vector_to_array(array),
-        duckdb::types::Value::Map(map) => convert_map_to_hash(map),
-        duckdb::types::Value::Union(_) => todo!(),
+        duckdb::types::Value::Map(map) => convert_duck_map(map),
+        duckdb::types::Value::Union(value) => duck_to_ruby(*value),
     }
 }
 
 #[inline]
-fn convert_map_to_hash(duck_map: duckdb::types::OrderedMap<duckdb::types::Value, duckdb::types::Value>) -> magnus::Value {
-    let hash_map = RHash::new();
-    duck_map.iter().for_each(|(key, value)| {
-        let key = duck_to_ruby(key.clone());
-        let val = duck_to_ruby(value.clone());
-        hash_map.aset(key, val).expect("Cound not set hash value");
+fn convert_to_hash(map: OrderedMap<String, duckdb::types::Value>) -> magnus::Value
+{
+    let hash = RHash::new();
+    map.iter().for_each(|(key, value)| {
+        hash.aset::<magnus::Value, _>(key.clone().into(), duck_to_ruby(value.clone())).expect("Failed to set hash value");
     });
-    hash_map.as_value()
+    hash.as_value()
+}
+
+#[inline]
+fn convert_duck_map(map: OrderedMap<duckdb::types::Value, duckdb::types::Value>) -> magnus::Value {
+
+    let hash = RHash::new();
+    map.iter().for_each(|(key, value)| {
+        hash.aset::<magnus::Value, _>(duck_to_ruby(key.clone()), duck_to_ruby(value.clone())).expect("Failed to set hash value");
+    });
+    hash.as_value()
 }
 
 #[inline]
@@ -94,19 +103,19 @@ fn convert_duck_time(time_unit: TimeUnit, time_value: i64) -> magnus::Value {
         },
         duckdb::types::TimeUnit::Millisecond => {
             let time_value = time_value as f64;
-            let divisor = 1000 as i64 as f64;
+            let divisor = 1000_f64;
             let fractional_seconds = time_value / divisor;
             TIME_CLASS.funcall("at", (fractional_seconds, )).unwrap()
         },
         duckdb::types::TimeUnit::Microsecond => {
             let time_value = time_value as f64;
-            let divisor = 1000_000 as i64 as f64;
+            let divisor = 1_000_000_f64;
             let fractional_seconds = time_value / divisor;
             TIME_CLASS.funcall("at", (fractional_seconds, )).unwrap()
         },
         duckdb::types::TimeUnit::Nanosecond => {
             let time_value = time_value as f64;
-            let divisor = 1000_000_000 as i64 as f64;
+            let divisor = 1_000_000_000_f64;
             let fractional_seconds = time_value / divisor;
             TIME_CLASS.funcall("at", (fractional_seconds, )).unwrap()
         },
@@ -135,4 +144,13 @@ fn convert_duck_decimal(value: duckdb::types::Value) -> magnus::Value {
         }
         _ => panic!("Converting value to decimal, which is not decimal")
     }
+}
+
+#[inline]
+fn convert_duck_interval(months: i32, days: i32, nanos: i64) -> magnus::Value {
+    let month_seconds = months as i64 * *SECONDS_PER_MONTH;
+    let day_seconds = days as i64 * *SECONDS_PER_DAY;
+    let nano_seconds = nanos / NANOS_PER_SECOND;
+    let total_seconds = month_seconds + day_seconds + nano_seconds;
+    DURATION_CLASS.funcall("seconds", (total_seconds,)).unwrap()
 }

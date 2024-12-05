@@ -1,8 +1,8 @@
-use duckdb::{Connection, Row};
+use duckdb::{params, Connection, Row};
 use magnus::{
-    class, define_class, function, method, prelude::*, Error, RArray, RHash, StaticSymbol, Value,
+    class, define_class, function, method, prelude::*, Error, RArray, RHash, StaticSymbol,
+    Value,
 };
-use std::time::Instant;
 
 use crate::conversions::string_from_ruby_hash;
 
@@ -31,11 +31,11 @@ impl MutDatabase {
         }
         // we are converting single column, do not create array
         else {
-            let column_name = column_names.get(0).ok_or(conversions::to_standard_error(
+            let column_name = column_names.first().ok_or(conversions::to_standard_error(
                 "Could not get first column".into(),
             ))?;
             let current_column_value = row
-                .get::<&str, duckdb::types::Value>(&column_name)
+                .get::<&str, duckdb::types::Value>(column_name)
                 .map_err(|err| conversions::to_standard_column_error(&err, column_name))?;
             let ruby_value = conversions::duck_to_ruby(current_column_value);
             Ok(ruby_value)
@@ -101,7 +101,7 @@ impl MutDatabase {
         let database = &self.0.borrow().database;
         database
             .execute_batch(&batch_statement)
-            .map(|val| magnus::Value::from(val))
+            .map(magnus::Value::from)
             .map_err(|err| conversions::to_standard_error(Box::new(err)))
     }
 
@@ -125,6 +125,14 @@ impl MutDatabase {
             .expect("Could not create secrets manager!");
         Self(std::cell::RefCell::from(DuckDatabase { database }))
     }
+
+    fn execute(&self, statement: String) -> Result<magnus::Value, magnus::Error> {
+        let database = &self.0.borrow().database;
+        database
+            .execute(&statement, params![])
+            .map(Value::from)
+            .map_err(|err| conversions::to_standard_error(Box::new(err)))
+    }
 }
 
 #[magnus::init]
@@ -132,6 +140,7 @@ fn init() -> Result<(), Error> {
     let class = define_class("DuckDatabase", class::object())?;
     class.define_singleton_method("new", function!(MutDatabase::initialize, 1))?;
     class.define_method("execute_batch", method!(MutDatabase::execute_batch, 1))?;
+    class.define_method("execute", method!(MutDatabase::execute, 1))?;
     class.define_method("pluck", method!(MutDatabase::duck_pluck, 1))?;
     class.define_method("pluck_to_hash", method!(MutDatabase::duck_pluck_to_hash, 1))?;
     Ok(())

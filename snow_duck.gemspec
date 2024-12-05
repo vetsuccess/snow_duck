@@ -8,16 +8,17 @@ Gem::Specification.new do |spec|
   spec.authors = ["nikola"]
   spec.email = ["nikola@deversity.net"]
 
-  spec.summary = "Write a short summary, because RubyGems requires one."
-  spec.description = "Write a longer description or delete this line."
-  spec.homepage = "https://example.com"
+  spec.summary = "Ruby bindings for DuckDB using Rust, providing high-performance in-memory analytics capabilities"
+  spec.description = "Snow Duck provides Ruby bindings for DuckDB through Rust integration, offering efficient in-memory analytics and data processing. It seamlessly converts between DuckDB and Ruby data types, supporting complex operations including intervals, timestamps, and structured data."
+  spec.homepage = "https://github.com/vetsuccess/snow_duck"
   spec.required_ruby_version = ">= 2.7.0"
 
-  spec.metadata["allowed_push_host"] = "https://example.com"
+  # Prevent pushing this gem to RubyGems.org. This is a private gem.
+  spec.metadata["allowed_push_host"] = nil
 
   spec.metadata["homepage_uri"] = spec.homepage
-  spec.metadata["source_code_uri"] = "https://example.com"
-  spec.metadata["changelog_uri"] = "https://example.com"
+  spec.metadata["source_code_uri"] = "https://github.com/vetsuccess/snow_duck"
+  spec.metadata["changelog_uri"] = "https://github.com/vetsuccess/snow_duck/blob/main/CHANGELOG.md"
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
@@ -33,4 +34,5 @@ Gem::Specification.new do |spec|
   spec.extensions = ["ext/snow_duck/extconf.rb"]
   spec.add_dependency "rb_sys", "~> 0.9.39"
   spec.add_dependency "rake-compiler", "~> 1.2.0"
+  spec.add_dependency "activesupport", ">= 6.0"
 end

@@ -84,7 +84,7 @@ module SnowDuck
           if self.class.method_defined?(variable_name.to_sym)
             relevant_var = send(variable_name.to_sym)
             raise ArgumentError, "#{variable_name} method returned nil" if relevant_var.nil?
-            database_var
+            relevant_var
           else
             raise ArgumentError, "There is neither instance method called #{variable_name} or instance variable @#{variable_name} defined" unless instance_variable_defined?("@#{variable_name}")
             relevant_var = instance_variable_get("@#{variable_name}")

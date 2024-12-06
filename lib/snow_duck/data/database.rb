@@ -21,12 +21,6 @@ module SnowDuck
         end
         yield duck_db
       end
-  
-      def drop_table(table)
-        table_name = table.respond_to?(:table_name) ? table.table_name : table.to_s
-        duck_db.execute_batch("DROP table #{table_name}")
-        initialized_tables.delete(table_name)
-      end
 
       def initialize_data_for(table_name)
         # make sure we handle all ancestors, recursively
@@ -57,16 +51,34 @@ module SnowDuck
       end
 
       def user_defined_tables_info
-        pluck_to_hash!("select * from duckdb_tables()")
+        pluck_to_hash!("select * from duckdb_tables();")
       end
 
       def user_defined_views_info
-        pluck_to_hash!("select * from duckdb_views")
+        pluck_to_hash!("select * from duckdb_views;")
       end
 
       def memory_info
-        pluck_to_hash!("select * from duckdb_memory()")
+        pluck_to_hash!("select * from duckdb_memory();")
       end
+
+      def drop(object_name, object_type)
+        raise ArgumentError, "Unknown object type #{object_type}" unless %i[table view macro function].include?(object_type.to_sym)
+        duck_db.execute("DROP #{object_type.to_s} IF EXISTS #{object_name};")
+        initialized_tables.delete(object_name)
+      end
+
+      def clear_database!
+        user_defined_tables_info.each do |table_info|
+          snow_duck_logger_object.info("Dropping table #{table_info['table_name']}")
+          drop(table_info['table_name'], :table)
+        end
+        user_defined_views_info.each do |view_info|
+          snow_duck_logger_object.info("Dropping view #{view_info['view_name']}")
+          drop(view_info['view_name'], :view)
+        end
+      end
+
 
       private
   

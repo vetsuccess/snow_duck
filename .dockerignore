@@ -2,5 +2,6 @@ tmp
 tmp/*
 ext/snow_duck/target
 .idea
+profile.json
 *.gem
 .git

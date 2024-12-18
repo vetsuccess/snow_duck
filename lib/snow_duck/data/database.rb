@@ -28,9 +28,7 @@ module SnowDuck
         ancestors.each { |ancestor| initialize_data_for(ancestor.table_name) }
         # now we deal with this table
         table_config = database_definition.table_definition_for(table_name)
-        if initialized_tables.include?(table_config.table_name)
-          snow_duck_log("Table #{table_config.table_name} already initialized, skipping remote initialization")
-        else
+        if !initialized_tables.include?(table_config.table_name)
           table_config.define_data(duck_db, s3_credentials)
           initialized_tables.add(table_config.table_name)
         end
@@ -79,8 +77,35 @@ module SnowDuck
         end
       end
 
+      def dump_database(database_filename)
+        database_alias = 'file_dump_database'
+        copied_data_names = Set.new
+        duck_db.execute_batch("ATTACH '#{database_filename}' AS #{database_alias};")
+        # we just want to copy stuff we pulled in, not everything defined
+        initialized_tables.each do |initialized_table_name|
+          # and again, we need to make sure that ancestors are copied/created first, mostly because of views
+          recursively_apply(initialized_table_name) do |config|
+            if !copied_data_names.include?(config.table_name)
+              duck_db.execute_batch(config.copy_data_ddl(database_alias)) unless copied_data_names.include?(config.table_name)
+              copied_data_names.add(config.table_name)
+            else
+              snow_duck_log("#{config.table_name} already dumped, skipping...")
+            end
+          end          
+        end
+        duck_db.execute_batch("DETACH file_dump_database;")
+      end
 
       private
+
+      def recursively_apply(table_name, &block)
+        ancestors = database_definition.table_ancestors(table_name)
+        ancestors.each do |ancestor|
+          recursively_apply(ancestor.table_name, &block)
+        end
+        table_config = database_definition.table_definition_for(table_name)
+        yield table_config if block_given?
+      end
   
       def duck_db
         @duck_db ||= begin

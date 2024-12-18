@@ -3,13 +3,21 @@ name = "snow_duck"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dev-dependencies]
+snow_duck = { path = "." }
+criterion = { version = "0.5", features = ["html_reports"] }
+magnus = { version = "0.7.1", features = ["embed"] }
+rand = "0.8.5"
+
+[[bench]]
+name = "my_benchmark"
+harness = false
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-magnus = "0.5.4"
+magnus = "0.7.1"
 once_cell = "1.18.0"
 chrono = "0.4.26"
 duckdb = { version = "=1.0.0", features = ["bundled"] }

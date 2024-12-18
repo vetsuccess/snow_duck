@@ -9,6 +9,7 @@ spec/reports/
 tmp/
 .idea
 .DS_Store
+profile.json
 *.gem
 
 

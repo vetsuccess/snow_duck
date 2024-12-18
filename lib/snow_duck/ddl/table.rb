@@ -16,6 +16,10 @@ module SnowDuck
         @ddl_query = generate_ddl
       end
 
+      def copy_data_ddl(database_name)
+        "CREATE TABLE #{database_name}.#{table_name} AS SELECT * FROM #{table_name}"
+      end
+
       def define_data(database, database_options)
         if derived_table?
           database.execute_batch("CREATE TABLE #{table_name} AS (#{ddl_query});")

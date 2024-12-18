@@ -15,6 +15,10 @@ module SnowDuck
         @ddl_query = generate_ddl
       end
 
+      def copy_data_ddl(database_name)
+        "CREATE VIEW #{database_name}.#{table_name} AS (#{generate_ddl})"
+      end
+
       def define_data(database, _)
         snow_duck_log_with_time("Creating #{table_name} view with options: (#{options})") do
           database.execute_batch("CREATE OR REPLACE VIEW #{table_name} AS (#{generate_ddl})")

@@ -1,11 +1,9 @@
+use crate::conversions::string_from_ruby_hash;
 use duckdb::{params, Connection, Row};
 use magnus::{
-    class, define_class, function, method, prelude::*, Error, RArray, RHash, StaticSymbol,
-    Value,
+    class, define_class, function, method, prelude::*, Error, IntoValue, RArray, RHash,
+    StaticSymbol, Value,
 };
-
-use crate::conversions::string_from_ruby_hash;
-
 mod conversions;
 
 pub struct DuckDatabase {
@@ -13,7 +11,7 @@ pub struct DuckDatabase {
 }
 
 #[magnus::wrap(class = "DuckDatabase", free_immediately)]
-struct MutDatabase(std::cell::RefCell<DuckDatabase>);
+pub struct MutDatabase(std::cell::RefCell<DuckDatabase>);
 
 impl MutDatabase {
     fn row_to_ruby_array(&self, row: &Row<'_>) -> Result<Value, magnus::Error> {
@@ -42,8 +40,8 @@ impl MutDatabase {
         }
     }
 
-    fn row_to_ruby_hash(&self, row: &Row<'_>) -> Result<RHash, magnus::Error> {
-        let ruby_hash = RHash::new();
+    fn row_to_ruby_hash(&self, row: &Row<'_>, with_indifferent_access_available: bool) -> Result<RHash, magnus::Error> {
+        let mut ruby_hash = RHash::new();
         let column_names = row.as_ref().column_names();
         for column_name in column_names {
             let current_column_value = row
@@ -54,12 +52,15 @@ impl MutDatabase {
                 conversions::duck_to_ruby(current_column_value),
             )?
         }
-        let with_indifferent_access: RHash =
-            ruby_hash.funcall("with_indifferent_access", ()).unwrap();
-        Ok(with_indifferent_access)
+
+        if with_indifferent_access_available {
+            ruby_hash = ruby_hash.funcall_public("with_indifferent_access", ())?;
+        }
+
+        Ok(ruby_hash)
     }
 
-    fn duck_pluck_to_hash(&self, query: String) -> Result<RArray, magnus::Error> {
+    pub fn duck_pluck_to_hash(&self, query: String) -> Result<RArray, magnus::Error> {
         let conn = &self.0.borrow().database;
         let mut stmt: duckdb::CachedStatement<'_> = conn
             .prepare_cached(&query)
@@ -68,17 +69,24 @@ impl MutDatabase {
             .query([])
             .map_err(|err| conversions::to_standard_error(Box::new(err)))?;
         let result = RArray::new();
+
+        let with_indifferent_access_available = RHash::new()
+            .respond_to("with_indifferent_access", false)
+            .map_err(|err| {
+                magnus::Error::new(magnus::exception::standard_error(), err.to_string())
+            })?;
+
         while let Some(row) = rows
             .next()
             .map_err(|err| conversions::to_standard_error(Box::new(err)))?
         {
-            let ruby_hash = self.row_to_ruby_hash(row)?;
+            let ruby_hash = self.row_to_ruby_hash(row, with_indifferent_access_available)?;
             result.push(ruby_hash).unwrap();
         }
         Ok(result)
     }
 
-    fn duck_pluck(&self, query: String) -> Result<RArray, magnus::Error> {
+    pub fn duck_pluck(&self, query: String) -> Result<RArray, magnus::Error> {
         let conn = &self.0.borrow().database;
         let mut stmt = conn
             .prepare_cached(&query)
@@ -97,15 +105,15 @@ impl MutDatabase {
         Ok(result)
     }
 
-    fn execute_batch(&self, batch_statement: String) -> Result<magnus::Value, magnus::Error> {
+    pub fn execute_batch(&self, batch_statement: String) -> Result<magnus::Value, magnus::Error> {
         let database = &self.0.borrow().database;
         database
             .execute_batch(&batch_statement)
-            .map(magnus::Value::from)
+            .map(|_| magnus::value::qnil().as_value())
             .map_err(|err| conversions::to_standard_error(Box::new(err)))
     }
 
-    fn initialize(options: magnus::RHash) -> Self {
+    pub fn initialize(options: magnus::RHash) -> Self {
         let database = Connection::open_in_memory().unwrap();
         let s3_region = string_from_ruby_hash(options, "s3_region");
         let s3_access_key_id = string_from_ruby_hash(options, "s3_access_key_id");
@@ -126,11 +134,11 @@ impl MutDatabase {
         Self(std::cell::RefCell::from(DuckDatabase { database }))
     }
 
-    fn execute(&self, statement: String) -> Result<magnus::Value, magnus::Error> {
+    pub fn execute(&self, statement: String) -> Result<magnus::Value, magnus::Error> {
         let database = &self.0.borrow().database;
         database
             .execute(&statement, params![])
-            .map(Value::from)
+            .map(|rows_changed| rows_changed.into_value())
             .map_err(|err| conversions::to_standard_error(Box::new(err)))
     }
 }

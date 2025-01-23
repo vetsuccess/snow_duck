@@ -1,5 +1,5 @@
 require_relative 'vertex'
-
+# Taken 1-1 from https://github.com/kevinrutherford/dag, with some tweaks
 module SnowDuck
   module Graph
     class DAG

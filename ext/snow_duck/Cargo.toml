@@ -14,7 +14,7 @@ name = "my_benchmark"
 harness = false
 
 [lib]
-crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib"]
 
 [dependencies]
 magnus = "0.7.1"

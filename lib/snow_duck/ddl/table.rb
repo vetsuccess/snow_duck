@@ -121,7 +121,7 @@ module SnowDuck
       end
 
       def remote_s3_bucket_name
-        ENV['SNOWFLAKE_S3_BUCKET']
+        options[:remote_s3_bucket_name] || ENV['SNOW_DUCK_S3_BUCKET']
       end
 
       def remote_file_type

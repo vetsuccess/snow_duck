@@ -14,7 +14,7 @@ RUN apt-get update -yqq && \
 # Update new packages
 RUN apt-get update
 
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs| bash -s -- -y --profile minimal
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs| bash -s -- -y --default-toolchain=1.85 --profile minimal
 
 WORKDIR /snow_duck_dir
 

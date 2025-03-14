@@ -10,6 +10,7 @@ tmp/
 .idea
 .DS_Store
 profile.json
+snow_duck.so
 *.gem
 
 

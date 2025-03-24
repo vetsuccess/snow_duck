@@ -20,4 +20,4 @@ crate-type = ["cdylib"]
 magnus = "0.7.1"
 once_cell = "1.18.0"
 chrono = "0.4.26"
-duckdb = { git = "https://github.com/duckdb/duckdb-rs.git", rev = "6ffcc70b4f1f67e19f3789b206cc22f4b8811468" }
+duckdb = { git = "https://github.com/duckdb/duckdb-rs.git", rev = "6ffcc70b4f1f67e19f3789b206cc22f4b8811468", features = ["bundled"]  }

@@ -367,8 +367,6 @@ version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aeb932158bd710538c73702db6945cb68a8fb08c519e6e12706b94263b36db8"
 dependencies = [
- "jobserver",
- "libc",
  "shlex",
 ]
 
@@ -586,8 +584,7 @@ checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 [[package]]
 name = "duckdb"
 version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d8c35886fbb5356fe90c8a9b69da5623d509c32bdfb6eefa7f57081eb05f69b"
+source = "git+https://github.com/duckdb/duckdb-rs.git?rev=6ffcc70b4f1f67e19f3789b206cc22f4b8811468#6ffcc70b4f1f67e19f3789b206cc22f4b8811468"
 dependencies = [
  "arrow",
  "cast",
@@ -812,15 +809,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
-name = "jobserver"
-version = "0.1.32"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "48d1dbcbbeb6a7fec7e059840aa538bd62aaccf972c7346c4d9d2059312853d0"
-dependencies = [
- "libc",
-]
-
-[[package]]
 name = "js-sys"
 version = "0.3.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -914,11 +902,9 @@ checksum = "18d287de67fe55fd7e1581fe933d965a5a9477b38e949cfa9f8574ef01506398"
 [[package]]
 name = "libduckdb-sys"
 version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ddeb5c68cb108d753a03613337f4bc9bed32281123d1f7884971f060f532fb6c"
+source = "git+https://github.com/duckdb/duckdb-rs.git?rev=6ffcc70b4f1f67e19f3789b206cc22f4b8811468#6ffcc70b4f1f67e19f3789b206cc22f4b8811468"
 dependencies = [
  "autocfg",
- "cc",
  "flate2",
  "pkg-config",
  "serde",

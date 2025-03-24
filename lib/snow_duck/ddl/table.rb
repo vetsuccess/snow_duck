@@ -27,7 +27,16 @@ module SnowDuck
           setup_s3_bucket(database_options)
           snow_duck_log_with_time("Extracting snowflake data for arguments to #{remote_file_location}") { export_table_data_to_s3 }
           snow_duck_log_with_time("Ingesting snowflake data for arguments") do
-            database.execute_batch("LOAD aws; LOAD httpfs; CREATE TABLE #{table_name} AS SELECT * FROM read_#{remote_file_type}('#{remote_file_location}');")
+            if remote_file_type == 'csv'
+              # Lets override whatever gets autodetected with explicit types -> this is especially important when file is empty, then it is assumed that every column is VARCHAR
+              # https://duckdb.org/docs/stable/data/csv/tips#override-the-types-of-specific-columns
+              json_types = column_definitions.to_json
+              database.execute_batch("LOAD aws; LOAD httpfs; CREATE TABLE #{table_name} AS SELECT * FROM read_csv('#{remote_file_location}', types = #{json_types});")
+            elsif remote_file_type == 'parquet'
+              database.execute_batch("LOAD aws; LOAD httpfs; CREATE TABLE #{table_name} AS SELECT * FROM read_parquet('#{remote_file_location}');")
+            else
+              raise "Unknown format #{remote_file_type}, not sure how to export and ingest it"
+            end
           end
           snow_duck_log_with_time("Deleting #{remote_file_location} from S3") { cleanup_remote_files }
         end
